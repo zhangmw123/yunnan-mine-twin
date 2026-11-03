@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+dist/
+
+# 运行时产物（本地 PostgreSQL 数据目录、录屏临时文件、日志）
+.runtime/
+*.log
+
+# 环境变量（真实口令不入库，参考 .env.example）
+.env
+.env.local
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 截图/录屏中间产物
+docs/screenshots/_*.png

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>云南高原露天矿山三维形变监测与溃坝推演系统</title>
+    <script>
+      window.CESIUM_BASE_URL = '/lib/Cesium/'
+    </script>
+    <!-- 排障用的前端自诊断上报（无桌面会话下无法开 DevTools，靠它把错误回传后端） -->
+    <script>
+      (function () {
+        var send = function (type, msg) {
+          try {
+            var u = '/api/v1/debug/collect?type=' + encodeURIComponent(type) +
+              '&msg=' + encodeURIComponent(String(msg).slice(0, 1500))
+            new Image().src = u
+          } catch (e) { }
+        }
+        window.addEventListener('error', function (e) {
+          send('error', (e.message || '') + ' @ ' + (e.filename || '') + ':' + (e.lineno || ''))
+        }, true)
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason
+          send('reject', (r && (r.stack || r.message)) || String(r))
+        })
+        var ce = console.error
+        console.error = function () {
+          send('console', Array.prototype.map.call(arguments, function (x) {
+            return (x && x.stack) || String(x)
+          }).join(' | '))
+          ce.apply(console, arguments)
+        }
+        var cw = console.warn
+        console.warn = function () {
+          send('warn', Array.prototype.map.call(arguments, String).join(' | '))
+          cw.apply(console, arguments)
+        }
+
+        function sample(tag) {
+          try {
+            var v = window.__mine && window.__mine.viewer
+            if (!v) { send('state', tag + ' viewer=null'); return }
+            var s = v.scene, g = s.globe
+            var info = {
+              tag: tag,
+              terrain: (v.terrainProvider && v.terrainProvider.constructor && v.terrainProvider.constructor.name) || 'none',
+              imageryLayers: v.imageryLayers.length,
+              imagery0Ready: v.imageryLayers.length ? !!v.imageryLayers.get(0).ready : null,
+              globeReady: g.ready,
+              tilesLoaded: g.tilesLoaded,
+              hasSurface: !!g._surface,
+              cameraAlt: Math.round(s.camera.positionCartographic.height),
+              vertExag: s.verticalExaggeration,
+              lighting: g.enableLighting,
+              groundAtm: g.showGroundAtmosphere,
+              canvas: [v.canvas.width, v.canvas.height, v.canvas.clientWidth, v.canvas.clientHeight],
+              now: v.clock.currentTime && v.clock.currentTime.toString()
+            }
+            send('state', JSON.stringify(info))
+          } catch (err) {
+            send('state-err', err.message)
+          }
+        }
+        send('boot', 'loaded ' + location.href)
+        ;[5000, 10000, 18000, 30000].forEach(function (t) {
+          setTimeout(function () { sample('t' + t) }, t)
+        })
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
